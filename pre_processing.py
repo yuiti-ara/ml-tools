@@ -57,38 +57,56 @@ class LambdaTransformer(TransformerMixin):
     def fit_transform(self, X, *args, **kwargs):
         return self.transform(X)
 
-    def transform(self, X, *args, **kwargs):
-        df = pd.DataFrame(X)
-        for col in df:
-            df[col] = self.fn(df[col])
-        return df
+    def transform(self, series, *args, **kwargs):
+        return self.fn(series)
+
+
+def apply_dt_replace(series, year=None, month=None, day=None, hour=None, minute=None, second=None, microsecond=None):
+    series_new = pd.to_datetime({
+        'year': series.dt.year if year is None else year,
+        'month': series.dt.month if month is None else month,
+        'day': series.dt.day if day is None else day,
+        'hour': series.dt.hour if hour is None else hour,
+        'minute': series.dt.minute if minute is None else minute,
+        'second': series.dt.second if second is None else second,
+        'microsecond': series.dt.day if microsecond is None else microsecond,
+    })
+    return series_new
+
+
+def cycle_sin(series):
+    delta = series - apply_dt_replace(series, hour=0, minute=0, second=0, microsecond=0)
+    secs_of_day = delta.dt.seconds
+    value_max = 24*60*60
+    return np.sin(2*np.pi*secs_of_day/value_max)
 
 
 def datetime_pipe(cols):
-    fns = [
-        lambda x: x.dt.year,
-        lambda x: x.dt.month,
-        lambda x: x.dt.day,
-        lambda x: x.dt.dayofweek,
-        lambda x: x.dt.dayofyear,
-        lambda x: x.dt.is_month_end,
-        lambda x: x.dt.is_month_start,
-        lambda x: x.dt.is_quarter_end,
-        lambda x: x.dt.is_quarter_start,
-        lambda x: x.dt.is_year_end,
-        lambda x: x.dt.is_year_start,
+    props = [
+        'year',
+        'month',
+        'day',
+        'hour',
+        'dayofweek',
+        'dayofyear',
+        'is_month_end',
+        'is_month_start',
+        'is_quarter_end',
+        'is_quarter_start',
+        'is_year_end',
+        'is_year_start',
     ]
-    # TODO
+    fns = [(prop, lambda x: getattr(x.dt, prop)) for prop in props]
     pipe = DataFrameMapper([
-        (cols, LambdaTransformer(fn)) for fn in fns
+        (col, LambdaTransformer(fn), {'input_df': True, 'alias': f'{col}_{fn_name}'})
+        for col in cols
+        for (fn_name, fn) in fns
     ], df_out=True)
     return pipe
 
 
 if __name__ == '__main__':
     import datetime as dt
-    df = pd.DataFrame({'date': [dt.datetime(2017, 1, 1), dt.datetime(2016, 1, 1)]})
-
-    pipe = datetime_pipe(['date'])
-
-    print(pipe.fit_transform(df))
+    df = pd.DataFrame({'date': [dt.datetime(2017, 1, 1, 1), dt.datetime(2017, 1, 1, 2)]})
+    s = cycle_sin(df['date'])
+    print(s)
