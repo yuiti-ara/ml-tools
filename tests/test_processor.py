@@ -17,13 +17,13 @@ class TestPreProcessor:
         }
         df_in = pd.DataFrame(data_in)
 
-        proc = pre_processor(
+        pipe = pre_processor(
             df_in,
             cats=['cat1', 'cat2'],
             nums=['num1', 'num2'],
             dates=['date1', 'date2']
         )
-        df_out = proc.fit_transform(df_in)
+        df_out = pipe.fit_transform(df_in)
 
         cols_expected = {
             'cat1',
