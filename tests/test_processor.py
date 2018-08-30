@@ -2,7 +2,7 @@ import datetime as dt
 
 import pandas as pd
 
-from pre_processing import pre_processor
+from pre_processing import pipe_pre
 
 
 class TestPreProcessor:
@@ -17,7 +17,7 @@ class TestPreProcessor:
         }
         df_in = pd.DataFrame(data_in)
 
-        pipe = pre_processor(
+        pipe = pipe_pre(
             df_in,
             cats=['cat1', 'cat2'],
             nums=['num1', 'num2'],

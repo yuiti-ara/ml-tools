@@ -2,22 +2,12 @@ import numpy as np
 import pandas as pd
 from sklearn_pandas import DataFrameMapper
 from sklearn_pandas.categorical_imputer import CategoricalImputer
-from sklearn.pipeline import TransformerMixin
-from sklearn.preprocessing import Imputer, FunctionTransformer, RobustScaler, LabelEncoder
+from sklearn.preprocessing import Imputer, FunctionTransformer, RobustScaler
+
+from transformers import ModifiedLabelEncoder, SeriesLambda
 
 
-class ModifiedLabelEncoder(LabelEncoder):
-    def fit(self, y, *args, **kwargs):
-        return super().fit(y)
-
-    def fit_transform(self, y, *args, **kwargs):
-        return super().fit_transform(y).reshape(-1, 1)
-
-    def transform(self, y, *args, **kwargs):
-        return super().transform(y).reshape(-1, 1)
-
-
-def pre_processor(df, cats=None, nums=None, dates=None):
+def pipe_pre(df, cats=None, nums=None, dates=None):
     cats = cats or []
     nums = nums or []
     dates = dates or []
@@ -47,18 +37,12 @@ def pre_processor(df, cats=None, nums=None, dates=None):
     return pipe
 
 
-class LambdaTransformer(TransformerMixin):
-    def __init__(self, fn):
-        self.fn = fn
+def cycle_sin(values, value_max):
+    return np.sin(2*np.pi*values/value_max)
 
-    def fit(self, *args, **kwargs):
-        return self
 
-    def fit_transform(self, X, *args, **kwargs):
-        return self.transform(X)
-
-    def transform(self, series, *args, **kwargs):
-        return self.fn(series)
+def cycle_cos(values, value_max):
+    return np.sin(2*np.pi*values/value_max)
 
 
 def apply_dt_replace(series, year=None, month=None, day=None, hour=None, minute=None, second=None, microsecond=None):
@@ -74,39 +58,69 @@ def apply_dt_replace(series, year=None, month=None, day=None, hour=None, minute=
     return series_new
 
 
-def cycle_sin(series):
+def secday(series):
     delta = series - apply_dt_replace(series, hour=0, minute=0, second=0, microsecond=0)
-    secs_of_day = delta.dt.seconds
-    value_max = 24*60*60
-    return np.sin(2*np.pi*secs_of_day/value_max)
+    return delta.dt.seconds
 
 
-def datetime_pipe(cols):
-    props = [
-        'year',
-        'month',
-        'day',
-        'hour',
-        'dayofweek',
-        'dayofyear',
-        'is_month_end',
-        'is_month_start',
-        'is_quarter_end',
-        'is_quarter_start',
-        'is_year_end',
-        'is_year_start',
+def weekmonth(series):
+    first_day = apply_dt_replace(series, day=1)
+    daymonth = series.dt.day
+    adjusted_dom = daymonth + first_day.dt
+    return int(np.ceil(adjusted_dom/7.0))
+
+
+def tuples_cycle(cols, name, fn, value_max):
+    tuples = [
+        *[
+            (col, [
+                SeriesLambda(fn),
+                SeriesLambda(lambda x: cycle_sin(x, value_max))
+            ], {'input_df': True, 'alias': f'{col}_{name}_sin'})
+            for col in cols
+        ],
+        *[
+            (col, [
+                SeriesLambda(fn),
+                SeriesLambda(lambda x: cycle_cos(x, value_max))
+            ], {'input_df': True, 'alias': f'{col}_{name}_cos'})
+            for col in cols
+        ],
     ]
-    fns = [(prop, lambda x: getattr(x.dt, prop)) for prop in props]
-    pipe = DataFrameMapper([
-        (col, LambdaTransformer(fn), {'input_df': True, 'alias': f'{col}_{fn_name}'})
+    return tuples
+
+
+def tuples_props(cols):
+    pairs = [
+        ('year', lambda x: x.dt.year),
+        ('is_month_end', lambda x: x.dt.is_month_end),
+        ('is_month_start', lambda x: x.dt.is_month_start),
+        ('is_quarter_end', lambda x: x.dt.is_quarter_end),
+        ('is_quarter_start', lambda x: x.dt.is_quarter_start),
+        ('is_year_end', lambda x: x.dt.is_year_end),
+        ('is_year_start', lambda x: x.dt.is_year_start),
+    ]
+    tuples = [
+        (col, SeriesLambda(fn), {'input_df': True, 'alias': f'{col}_{prop}'})
         for col in cols
-        for (fn_name, fn) in fns
+        for (prop, fn) in pairs
+    ]
+    return tuples
+
+
+def pipe_time(cols):
+    pipe = DataFrameMapper([
+        *tuples_cycle(cols, 'secday', secday, 24*60*60),
+        *tuples_cycle(cols, 'dayweek', lambda x: x.dt.dayofweek, 7),
+        *tuples_cycle(cols, 'monthyear', lambda x: x.dt.month, 12),
+        *tuples_props(cols),
     ], df_out=True)
     return pipe
 
 
 if __name__ == '__main__':
     import datetime as dt
-    df = pd.DataFrame({'date': [dt.datetime(2017, 1, 1, 1), dt.datetime(2017, 1, 1, 2)]})
-    s = cycle_sin(df['date'])
-    print(s)
+    df = pd.DataFrame({'date': [dt.datetime(2017, 1, 1, hour=6), dt.datetime(2017, 1, 1)]})
+    pipe = pipe_time(['date'])
+    df = pipe.fit_transform(df)
+    print(df.to_string())
