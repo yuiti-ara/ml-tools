@@ -1,40 +1,22 @@
 import numpy as np
 import pandas as pd
+
 from sklearn_pandas import DataFrameMapper
-from sklearn_pandas.categorical_imputer import CategoricalImputer
-from sklearn.preprocessing import Imputer, FunctionTransformer, RobustScaler
-
-from transformers import ModifiedLabelEncoder, SeriesLambda
+from sklearn.pipeline import TransformerMixin
 
 
-def pipe_pre(df, cats=None, nums=None, dates=None):
-    cats = cats or []
-    nums = nums or []
-    dates = dates or []
-    pipe = DataFrameMapper([
-        *[
-            (col, [CategoricalImputer(strategy='fixed_value', replacement='_'), ModifiedLabelEncoder()])
-            for col in cats
-        ],
-        *[
-            (col, [FunctionTransformer(pd.isnull, validate=False)], {'alias': f'{col}_na'})
-            for col in nums+dates if df[col].isnull().sum() > 0
-        ],
-        *[
-            (col, [
-                FunctionTransformer(lambda x: x.reshape(-1, 1), validate=False),
-                Imputer(strategy='median'),
-                RobustScaler()
-            ])
-            for col in nums
-        ],
-        *[
-            (col, [FunctionTransformer(np.int64, validate=False)])
-            for col in dates
-        ],
+class SeriesLambda(TransformerMixin):
+    def __init__(self, fn):
+        self.fn = fn
 
-    ], df_out=True)
-    return pipe
+    def fit(self, *args, **kwargs):
+        return self
+
+    def fit_transform(self, X, *args, **kwargs):
+        return self.transform(X)
+
+    def transform(self, series, *args, **kwargs):
+        return self.fn(series)
 
 
 def cycle_sin(values, value_max):
