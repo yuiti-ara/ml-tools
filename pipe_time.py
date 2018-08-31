@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-from sklearn_pandas import DataFrameMapper
 from sklearn.pipeline import TransformerMixin
 
 
@@ -90,19 +89,20 @@ def tuples_props(cols):
     return tuples
 
 
-def pipe_time(cols):
-    pipe = DataFrameMapper([
+def tuples_time(cols):
+    pipe = [
         *tuples_cycle(cols, 'secday', secday, 24*60*60),
         *tuples_cycle(cols, 'dayweek', lambda x: x.dt.dayofweek, 7),
         *tuples_cycle(cols, 'monthyear', lambda x: x.dt.month, 12),
         *tuples_props(cols),
-    ], df_out=True)
+    ]
     return pipe
 
 
 if __name__ == '__main__':
     import datetime as dt
+    from sklearn_pandas import DataFrameMapper
     df = pd.DataFrame({'date': [dt.datetime(2017, 1, 1, hour=6), dt.datetime(2017, 1, 1)]})
-    pipe = pipe_time(['date'])
+    pipe = DataFrameMapper(tuples_time(['date']), df_out=True)
     df = pipe.fit_transform(df)
     print(df.to_string())

@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from sklearn_pandas import DataFrameMapper
 from sklearn_pandas.categorical_imputer import CategoricalImputer
 from sklearn.preprocessing import Imputer, FunctionTransformer, RobustScaler, LabelEncoder
 
@@ -16,11 +15,11 @@ class ModifiedLabelEncoder(LabelEncoder):
         return super().transform(y).reshape(-1, 1)
 
 
-def pipe_pre(df, cats=None, nums=None, dates=None):
+def tuples_pre(df, cats=None, nums=None, dates=None):
     cats = cats or []
     nums = nums or []
     dates = dates or []
-    pipe = DataFrameMapper([
+    pipe = [
         *[
             (col, [CategoricalImputer(strategy='fixed_value', replacement='_'), ModifiedLabelEncoder()])
             for col in cats
@@ -42,5 +41,24 @@ def pipe_pre(df, cats=None, nums=None, dates=None):
             for col in dates
         ],
 
-    ], df_out=True)
+    ]
     return pipe
+
+
+if __name__ == '__main__':
+    import datetime as dt
+    from sklearn_pandas import DataFrameMapper
+    data_in = {
+        'cat1': ['a', 'b', 'c', 'd', 'e'],
+        'cat2': ['a', 'b', None, None, 'e'],
+        'num1': [1, 2.5, 3, 4, 5.2],
+        'num2': [1, 2.5, None, None, 5.2],
+        'date1': [dt.datetime(2017, 1, idx) for idx in range(1, 6)],
+        'date2': [None, *[dt.datetime(2017, 1, idx) for idx in range(1, 4)], None],
+    }
+    df_in = pd.DataFrame(data_in)
+
+    pipe = DataFrameMapper(
+        tuples_pre(df_in, cats=['cat1', 'cat2'], nums=['num1', 'num2'], dates=['date1', 'date2']),
+    df_out=True)
+    print(pipe.fit_transform(df_in).to_string())
