@@ -20,6 +20,7 @@ class DateImputer(TransformerMixin):
 
 
 def pipe_date(df, cols):
+    # TODO
     pipe = DataFrameMapper([
         *[
             (col, FunctionTransformer(pd.isnull, validate=False), {'alias': f'{col}_na'})
