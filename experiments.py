@@ -1,7 +1,7 @@
 import datetime as dt
 import pandas as pd
 
-from feature_engineering import (
+from ml_tools.feature_engineering import (
     PandasFeatureUnion,
     pipe_cat,
     pipe_num,
@@ -37,7 +37,9 @@ dates = ['date1', 'date2']
 pipe = PandasFeatureUnion([
     ('cats', pipe_cat(cats)),
     ('nums', pipe_num(df_tr, nums)),
-    ('cycles', pipe_datecycles(['date2'])),
+    ('datecycles', pipe_datecycles(['date2'])),
+    ('datena', pipe_datena(df_tr, ['date2'])),
+    ('dateparts', pipe_dateparts(['date2'])),
     ('raw', pipe_raw(cats))
 ])
 

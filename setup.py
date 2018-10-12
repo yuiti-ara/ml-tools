@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 def run_setup():
     setup(
-        name='auto-preprocessing',
+        name='ml-tools',
         version='0.1',
         author='Yuiti Ara',
         author_email='yuiti.usp@gmail.com',
