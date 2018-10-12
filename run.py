@@ -5,10 +5,10 @@ from feature_engineering import (
     PandasFeatureUnion,
     pipe_cat,
     pipe_num,
-    pipe_date,
+    pipe_datena,
     pipe_dateparts,
     pipe_datecycles,
-    pipe_raw
+    pipe_raw,
 )
 
 df_tr = pd.DataFrame({
@@ -35,10 +35,10 @@ nums = ['num1', 'num2']
 dates = ['date1', 'date2']
 
 pipe = PandasFeatureUnion([
-    # ('cats', pipe_cat(cats)),
-    # ('nums', pipe_num(df_tr, nums)),
-    ('cycles', pipe_date(df_tr, ['date2'])),
-    # ('raw', pipe_raw(cats))
+    ('cats', pipe_cat(cats)),
+    ('nums', pipe_num(df_tr, nums)),
+    ('cycles', pipe_datecycles(['date2'])),
+    ('raw', pipe_raw(cats))
 ])
 
 pipe.fit(df_tr)

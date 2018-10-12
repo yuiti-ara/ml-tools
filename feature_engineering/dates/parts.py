@@ -39,7 +39,6 @@ def pipe_dateparts(cols):
         'is_year_end',
         'is_leap_year',
         'daysinmonth',
-        'days_in_month',
     ]
     pipe = DataFrameMapper([
         (col, DatePart(prop), {'alias': f'{col}_{prop}'})
