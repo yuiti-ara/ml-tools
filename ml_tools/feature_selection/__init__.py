@@ -1,5 +1,6 @@
 from sklearn.pipeline import TransformerMixin
-from rfpimp import importances
+from sklearn.ensemble import RandomForestRegressor
+from rfpimp import importances, oob_dependences
 
 
 class FilterCorr(TransformerMixin):
@@ -16,6 +17,20 @@ class FilterCorr(TransformerMixin):
                 cols_bad.add(col)
         self.cols = list(set(df.columns) - cols_bad)
 
+        return self
+
+    def transform(self, df):
+        return df[self.cols]
+
+
+class FilterDependent(TransformerMixin):
+    def __init__(self):
+        self.cols = []
+
+    def fit(self, df):
+        model = RandomForestRegressor(n_estimators=50, n_jobs=-1, oob_score=True)
+        deps = oob_dependences(model, df)
+        self.cols = list(deps[deps.Dependence < 0].index)
         return self
 
     def transform(self, df):
