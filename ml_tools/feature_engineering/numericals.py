@@ -3,6 +3,10 @@ from sklearn_pandas import DataFrameMapper
 from sklearn.preprocessing import Imputer, FunctionTransformer, StandardScaler
 
 
+def reshape(x):
+    return x.reshape(-1, 1)
+
+
 def pipe_num(df, cols):
     pipe = DataFrameMapper([
         *[
@@ -11,7 +15,7 @@ def pipe_num(df, cols):
         ],
         *[
             (col, [
-                FunctionTransformer(lambda x: x.reshape(-1, 1), validate=False),
+                FunctionTransformer(reshape, validate=False),
                 Imputer(strategy='median'),
                 StandardScaler()
             ]) for col in cols
