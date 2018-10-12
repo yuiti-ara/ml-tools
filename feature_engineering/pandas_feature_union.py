@@ -5,6 +5,10 @@ from sklearn.pipeline import FeatureUnion, _fit_transform_one, _transform_one
 from scipy import sparse
 
 
+def merge_dataframes_by_column(Xs):
+    return pd.concat(Xs, axis="columns", copy=False)
+
+
 class PandasFeatureUnion(FeatureUnion):
     def fit_transform(self, X, y=None, **fit_params):
         self._validate_transformers()
@@ -21,11 +25,8 @@ class PandasFeatureUnion(FeatureUnion):
         if any(sparse.issparse(f) for f in Xs):
             Xs = sparse.hstack(Xs).tocsr()
         else:
-            Xs = self.merge_dataframes_by_column(Xs)
+            Xs = merge_dataframes_by_column(Xs)
         return Xs
-
-    def merge_dataframes_by_column(self, Xs):
-        return pd.concat(Xs, axis="columns", copy=False)
 
     def transform(self, X):
         Xs = Parallel(n_jobs=self.n_jobs)(
@@ -37,5 +38,5 @@ class PandasFeatureUnion(FeatureUnion):
         if any(sparse.issparse(f) for f in Xs):
             Xs = sparse.hstack(Xs).tocsr()
         else:
-            Xs = self.merge_dataframes_by_column(Xs)
+            Xs = merge_dataframes_by_column(Xs)
         return Xs

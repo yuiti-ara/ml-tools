@@ -5,29 +5,52 @@ from sklearn.pipeline import TransformerMixin
 
 
 class DatePart(TransformerMixin):
-    def __init__(self, fn):
-        self.fn = fn
+    def __init__(self, datepart):
+        self.datepart = datepart
 
     def fit(self, *args, **kwargs):
         return self
 
     def transform(self, x):
-        return self.fn(pd.Series(x))
+        return getattr(pd.Series(x).dt, self.datepart)
 
 
 def pipe_dateparts(cols):
     props = [
         'year',
-        'is_month_end',
+        'month',
+        'day',
+        'hour',
+        'minute',
+        'second',
+        'microsecond',
+        'nanosecond',
+        'week',
+        'weekofyear',
+        'dayofweek',
+        'weekday',
+        'dayofyear',
+        'quarter',
         'is_month_start',
-        'is_quarter_end',
+        'is_month_end',
         'is_quarter_start',
-        'is_year_end',
+        'is_quarter_end',
         'is_year_start',
+        'is_year_end',
+        'is_leap_year',
+        'daysinmonth',
+        'days_in_month',
     ]
     pipe = DataFrameMapper([
-        (col, DatePart(lambda x: getattr(x, prop)), {'alias': f'{col}_{prop}'})
+        (col, DatePart(prop), {'alias': f'{col}_{prop}'})
         for col in cols
         for prop in props
     ], df_out=True)
     return pipe
+
+
+if __name__ == '__main__':
+    import datetime as dt
+    df = pd.DataFrame({'date1': [None, dt.datetime(2017, 1, 1), dt.datetime(2017, 1, 1)]})
+    pipe = pipe_dateparts(['date1'])
+    print(pipe.fit_transform(df).to_string())

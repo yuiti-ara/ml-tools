@@ -64,6 +64,5 @@ def pipe_datecycles(cols):
 if __name__ == '__main__':
     import datetime as dt
     df = pd.DataFrame({'date1': [None, dt.datetime(2017, 1, 1), dt.datetime(2017, 1, 1)]})
-    # df = pd.DataFrame({'date1': [None, None]})
     pipe = pipe_datecycles(['date1'])
     print(pipe.fit_transform(df).to_string())

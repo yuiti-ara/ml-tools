@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn_pandas import DataFrameMapper
-from sklearn.preprocessing import Imputer, FunctionTransformer, RobustScaler
+from sklearn.preprocessing import Imputer, FunctionTransformer, StandardScaler
 
 
 def pipe_num(df, cols):
@@ -13,7 +13,7 @@ def pipe_num(df, cols):
             (col, [
                 FunctionTransformer(lambda x: x.reshape(-1, 1), validate=False),
                 Imputer(strategy='median'),
-                RobustScaler()
+                StandardScaler()
             ]) for col in cols
         ]
     ], df_out=True)
