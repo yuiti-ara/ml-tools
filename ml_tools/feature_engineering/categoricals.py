@@ -1,7 +1,7 @@
 import pandas as pd
 
 from sklearn.pipeline import TransformerMixin
-from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 from sklearn_pandas import DataFrameMapper
 
 
@@ -26,11 +26,24 @@ def to_str(x):
     return x
 
 
-def pipe_cat(cols):
+def reshape(x):
+    return x.reshape(-1, 1)
+
+
+def pipe_cat(cols_big, cols_small):
     pipe = DataFrameMapper([
-        (col, [
-            FunctionTransformer(to_str, validate=False),
-            FreqEncoder(),
-        ]) for col in cols
+        *[
+            (col, [
+                FunctionTransformer(to_str, validate=False),
+                FreqEncoder(),
+            ]) for col in cols_big
+        ],
+        *[
+            (col, [
+                FunctionTransformer(to_str, validate=False),
+                FunctionTransformer(reshape, validate=False),
+                OneHotEncoder(),
+            ]) for col in cols_small
+        ],
     ], df_out=True)
     return pipe
