@@ -36,7 +36,7 @@ if __name__ == '__main__':
     dates = ['date1', 'date2']
 
     pipe = PandasFeatureUnion([
-        ('cats', pipe_cat(cats)),
+        ('cats', pipe_cat(cats, [])),
         ('nums', pipe_num(df_tr, nums)),
         ('datecycles', pipe_datecycles(['date2'])),
         ('datena', pipe_datena(df_tr, ['date2'])),
