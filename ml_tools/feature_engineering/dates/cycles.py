@@ -23,11 +23,19 @@ def sec_of_day(series):
     return delta.dt.seconds
 
 
+def day_of_week(series):
+    return series.dt.dayofweek
+
+
 def week_of_month(series):
     first_day = dt_replace(series, day=1)
     dom = series.dt.day
     adjusted_dom = dom + first_day.dt.weekday
     return np.int64(np.ceil(adjusted_dom/7.0))
+
+
+def month_of_year(series):
+    return series.dt.month
 
 
 class DateCycle(TransformerMixin):
@@ -43,10 +51,10 @@ class DateCycle(TransformerMixin):
     def _fn(name, x):
         x = pd.Series(x)
         periods = {
-            'sec_day': (sec_of_day, 24*60*60),
-            'day_week': (lambda x: x.dt.dayofweek, 7),
+            'sec_day':    (sec_of_day, 24*60*60),
+            'day_week':   (day_of_week, 7),
             'week_month': (week_of_month, x.dt.daysinmonth),
-            'month_year': (lambda x: x.dt.month, 12),
+            'month_year': (month_of_year, 12),
         }
         fn, value_max = periods[name]
         return fn(x), value_max
