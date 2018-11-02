@@ -1,2 +1,2 @@
-from .correlation import FilterCorr
-from .permutaion_importance import rfe
+from .correlation import *
+from .permutation_importance import *
