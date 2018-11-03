@@ -10,7 +10,7 @@ from rfpimp import importances
 from joblib import Parallel, delayed
 
 
-def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, imp=False):
+def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, imp=False, n_iter=5):
     model.fit(X_tr, y_tr)
     y_tr_pred = model.predict(X_tr)
     y_tr_proba = model.predict_proba(X_tr)
@@ -39,12 +39,12 @@ def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False,
         skplt.metrics.plot_roc(y_vl, y_vl_proba, classes_to_plot=['1'])
         
     if imp:
-        imps = bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl)
+        imps = bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl, n_iter=n_iter)
         display(pd.DataFrame(imps.sort_values(ascending=False)))
         
-        perm = PermutationImportance(model, scoring=make_scorer(roc_auc_score), random_state=42)
+        perm = PermutationImportance(model, scoring=make_scorer(roc_auc_score), random_state=42, n_iter=n_iter)
         perm.fit(X_vl, y_vl)
-        display(eli5.show_weights(perm, feature_names=list(X_vl.columns)))
+        display(eli5.show_weights(perm, feature_names=list(X_vl.columns), top=None))
 
 
 def evaluate_cv(model, X, y):
