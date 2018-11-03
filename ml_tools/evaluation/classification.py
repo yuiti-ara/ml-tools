@@ -5,10 +5,10 @@ import scikitplot as skplt
 import eli5
 from eli5.sklearn import PermutationImportance
 from sklearn.model_selection import cross_validate
-from sklearn.metrics import roc_auc_score, classification_report, log_loss, f1_score
+from sklearn.metrics import classification_report, roc_auc_score, log_loss, f1_score
 
 
-def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=False, report=False, cm=False, roc=False, imp=False):
+def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, imp=False):
     model.fit(X_tr, y_tr)
     y_tr_pred = model.predict(X_tr)
     y_tr_proba = model.predict_proba(X_tr)
@@ -37,9 +37,9 @@ def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=False, report=False, cm=False
         skplt.metrics.plot_roc(y_vl, y_vl_proba, classes_to_plot=['1'])
         
     if imp:
-        pimp = PermutationImportance(model, random_state=42, n_iter=20)
-        pimp.fit(X_vl, y_vl)
-        display(eli5.show_weights(pimp))
+        perm = PermutationImportance(model, random_state=42, n_iter=20)
+        perm.fit(X_vl, y_vl)
+        display(eli5.show_weights(perm, top=None))
 
 
 def evaluate_cv(model, X, y):
