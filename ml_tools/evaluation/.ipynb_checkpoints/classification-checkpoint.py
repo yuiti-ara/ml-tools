@@ -5,7 +5,9 @@ import scikitplot as skplt
 import eli5
 from eli5.sklearn import PermutationImportance
 from sklearn.model_selection import cross_validate
-from sklearn.metrics import classification_report, roc_auc_score, log_loss, f1_score
+from sklearn.metrics import classification_report, roc_auc_score, log_loss, f1_score, make_scorer
+from rfpimp import importances
+from joblib import Parallel, delayed
 
 
 def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, imp=False):
@@ -37,9 +39,12 @@ def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False,
         skplt.metrics.plot_roc(y_vl, y_vl_proba, classes_to_plot=['1'])
         
     if imp:
-        perm = PermutationImportance(model, random_state=42, n_iter=20)
+        imps = bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl)
+        display(pd.DataFrame(imps.sort_values(ascending=False)))
+        
+        perm = PermutationImportance(model, scoring=make_scorer(roc_auc_score), random_state=42)
         perm.fit(X_vl, y_vl)
-        display(eli5.show_weights(perm, top=None))
+        display(eli5.show_weights(perm, feature_names=list(X_vl.columns)))
 
 
 def evaluate_cv(model, X, y):
@@ -49,3 +54,16 @@ def evaluate_cv(model, X, y):
     df_cv['cv_avg'] = df_scores.mean()
     df_cv['cv_std'] = df_scores.std()
     display(df_cv.iloc[::-1])
+
+
+def fn_imp(model, X_vl, y_vl):
+    imp = importances(model, X_vl, y_vl, metric=make_scorer(roc_auc_score), sort=False)
+    return imp['Importance']
+
+
+def bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl, n_iter=5):
+    model.fit(X_tr, y_tr)
+    imps = Parallel(n_jobs=-1)(delayed(fn_imp)(model, X_vl, y_vl) for _ in range(n_iter))
+    df_imps = pd.DataFrame(imps).transpose()
+    series = df_imps.sum(axis='columns')
+    return series/series.sum()
