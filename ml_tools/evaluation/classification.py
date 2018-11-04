@@ -3,15 +3,13 @@ from IPython.display import display
 import numpy as np
 import pandas as pd
 import scikitplot as skplt
-import eli5
-from eli5.sklearn import PermutationImportance
 from sklearn.model_selection import cross_validate
 from sklearn.metrics import classification_report, roc_auc_score, log_loss, f1_score, make_scorer
 from rfpimp import importances
 from joblib import Parallel, delayed
 
 
-def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, rfimp=False, eli5=False):
+def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=False, report=False, cm=False, roc=False, rfimp=False, eli5_imp=False):
     model.fit(X_tr, y_tr)
     y_tr_pred = model.predict(X_tr)
     y_tr_proba = model.predict_proba(X_tr)
@@ -40,13 +38,8 @@ def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False,
         skplt.metrics.plot_roc(y_vl, y_vl_proba, classes_to_plot=['1'])
         
     if rfimp:
-        imps = bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl)
+        imps = bootstrapped_imps(model, X_vl, y_vl)
         display(pd.DataFrame(imps.sort_values(ascending=False)))
-    
-    if eli5:
-        perm = PermutationImportance(model, scoring=make_scorer(roc_auc_score), random_state=42, n_iter=5)
-        perm.fit(X_vl, y_vl)
-        display(eli5.show_weights(perm, feature_names=list(X_vl.columns), top=None))
 
 
 def evaluate_cv(model, X, y):
@@ -63,9 +56,9 @@ def fn_imp(model, X_vl, y_vl):
     return imp['Importance']
 
 
-def bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl, n_iter=5):
-    model.fit(X_tr, y_tr)
-    imps = [fn_imp(model, X_vl, y_vl) for _ in range(n_iter)]
+def bootstrapped_imps(model, X_vl, y_vl, n_iter=5):
+    model.set_params(n_jobs=1)
+    imps = Parallel(n_jobs=-1)(delayed(fn_imp)(model, X_vl, y_vl) for _ in range(n_iter))
     df_imps = pd.DataFrame(imps).transpose()
     series = df_imps.sum(axis='columns')
     return series/series.sum()

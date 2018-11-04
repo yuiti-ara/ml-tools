@@ -18,7 +18,10 @@ class PermImpElimination(TransformerMixin):
         cols_good = list(self.X_tr.columns)
 
         while cols_good:
-            series_imp = bootstrapped_imps(self.model, self.X_tr[cols_good], self.y_tr, X_vl[cols_good], y_vl)
+            self.model.set_params(n_jobs=-1)
+            self.model.fit(self.X_tr[cols_good], self.y_tr)
+
+            series_imp = bootstrapped_imps(self.model, X_vl[cols_good], y_vl)
             col_bad = series_imp.idxmin()
             value_bad = series_imp[col_bad]
             if value_bad > self.cutoff:
@@ -39,8 +42,8 @@ def fn_imp(model, X_vl, y_vl):
     return imp['Importance']
 
 
-def bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl, n_iter=5):
-    model.fit(X_tr, y_tr)
+def bootstrapped_imps(model, X_vl, y_vl, n_iter=5):
+    model.set_params(n_jobs=1)
     imps = Parallel(n_jobs=-1)(delayed(fn_imp)(model, X_vl, y_vl) for _ in range(n_iter))
     df_imps = pd.DataFrame(imps).transpose()
     series = df_imps.sum(axis='columns')
