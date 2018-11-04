@@ -1,5 +1,6 @@
 from IPython.display import display
 
+import numpy as np
 import pandas as pd
 import scikitplot as skplt
 import eli5
@@ -10,7 +11,7 @@ from rfpimp import importances
 from joblib import Parallel, delayed
 
 
-def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, imp=False, n_iter=5):
+def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False, roc=False, rfimp=False, eli5=False):
     model.fit(X_tr, y_tr)
     y_tr_pred = model.predict(X_tr)
     y_tr_proba = model.predict_proba(X_tr)
@@ -38,11 +39,12 @@ def evaluate(model, X_tr, y_tr, X_vl, y_vl, metric=True, report=False, cm=False,
     if roc:
         skplt.metrics.plot_roc(y_vl, y_vl_proba, classes_to_plot=['1'])
         
-    if imp:
-        imps = bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl, n_iter=n_iter)
+    if rfimp:
+        imps = bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl)
         display(pd.DataFrame(imps.sort_values(ascending=False)))
-        
-        perm = PermutationImportance(model, scoring=make_scorer(roc_auc_score), random_state=42, n_iter=n_iter)
+    
+    if eli5:
+        perm = PermutationImportance(model, scoring=make_scorer(roc_auc_score), random_state=42, n_iter=5)
         perm.fit(X_vl, y_vl)
         display(eli5.show_weights(perm, feature_names=list(X_vl.columns), top=None))
 
@@ -63,7 +65,7 @@ def fn_imp(model, X_vl, y_vl):
 
 def bootstrapped_imps(model, X_tr, y_tr, X_vl, y_vl, n_iter=5):
     model.fit(X_tr, y_tr)
-    imps = Parallel(n_jobs=-1)(delayed(fn_imp)(model, X_vl, y_vl) for _ in range(n_iter))
+    imps = [fn_imp(model, X_vl, y_vl) for _ in range(n_iter)]
     df_imps = pd.DataFrame(imps).transpose()
     series = df_imps.sum(axis='columns')
     return series/series.sum()
