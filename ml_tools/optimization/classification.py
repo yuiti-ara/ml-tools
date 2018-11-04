@@ -1,6 +1,5 @@
 import numpy as np
 
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import ParameterGrid, cross_val_score
 from skopt import gp_minimize
@@ -51,39 +50,35 @@ def optimize_xg(model_xg, X_tr, y_tr, X_vl=None, y_vl=None):
     return resp
 
 
-def optimize_rf(X_tr, y_tr, X_vl=None, y_vl=None):
+def optimize_rf(model_rf, X_tr, y_tr, X_vl=None, y_vl=None):
     if X_vl is None or y_vl is None:
-        best_model, best_score, all_models, all_scores = bestFit(
-            RandomForestClassifier(),
-            ParameterGrid({
-                'min_samples_leaf': [10, 20, 30, 40, 50, 60, 70, 80, 100],
-                'max_features': [1, .75, .5, 'sqrt', 'log2'],
-                'n_estimators': [200],
-                'n_jobs': [-1],
-                'random_state': [42],
-                'class_weight': ['balanced'],
-            }),
-            X_tr, y_tr, nfolds=4,
-            metric=roc_auc_score,
-            greater_is_better=True,
-            scoreLabel='AUC'
-        )
-
+        kwargs = {
+            'X_train': X_tr,
+            'y_train': y_tr,
+            'nfolds': 4,
+        }
     else:
-        best_model, best_score, all_models, all_scores = bestFit(
-            RandomForestClassifier(),
-            ParameterGrid({
-                'min_samples_leaf': [10, 20, 30, 40, 50, 60, 70, 80, 100],
-                'max_features': [1, .75, .5, 'sqrt', 'log2'],
-                'n_estimators': [200],
-                'n_jobs': [-1],
-                'random_state': [42],
-                'class_weight': ['balanced'],
-            }),
-            X_tr, y_tr, X_vl, y_vl,
-            metric=roc_auc_score,
-            greater_is_better=True,
-            scoreLabel='AUC'
-        )
+        kwargs = {
+            'X_train': X_tr,
+            'y_train': y_tr,
+            'X_val': X_vl,
+            'y_val': y_vl,
+        }
 
+    best_model, best_score, all_models, all_scores = bestFit(
+        model_rf,
+        ParameterGrid({
+            'min_samples_leaf': [10, 25, 50, 75, 100],
+            'max_features': [1, .75, .5, 'sqrt', 'log2'],
+            'n_estimators': [200],
+            'n_jobs': [1],
+            'random_state': [42],
+            'class_weight': ['balanced'],
+        }),
+        metric=roc_auc_score,
+        greater_is_better=True,
+        scoreLabel='roc-auc',
+        n_jobs=-1,
+        **kwargs,
+    )
     return best_model, best_score
